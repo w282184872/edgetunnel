@@ -1,40 +1,41 @@
-name: Upstream Sync
+name: 自动同步上游仓库
 
 permissions:
   contents: write
 
 on:
   schedule:
-    - cron: "0 0 * * *" # every day
-  workflow_dispatch:
+    - cron: "0 1 * * *" # 每天北京时间早上 9:00 自动触发
+  workflow_dispatch: # 允许在 GitHub 网页手动点击触发
 
 jobs:
   sync_latest_from_upstream:
-    name: Sync latest commits from upstream repo
+    name: 从上游仓库同步最新代码
     runs-on: ubuntu-latest
-    if: ${{ github.event.repository.fork }}
+    if: ${{ github.event.repository.fork }} # 确保只在 Fork 的仓库中运行
 
     steps:
-      # Step 1: run a standard checkout action
-      - name: Checkout target repo
+      # 步骤 1：拉取当前仓库的代码
+      - name: 检出当前仓库代码
         uses: actions/checkout@v6
 
-      # Step 2: run the sync action
-      - name: Sync upstream changes
+      # 步骤 2：执行同步操作
+      - name: 同步上游仓库变更
         id: sync
         uses: aormsby/fork-sync-with-upstream-action@v3.4.3
         with:
           upstream_sync_repo: cmliu/edgetunnel
           upstream_sync_branch: main
           target_sync_branch: main
-          target_repo_token: ${{ secrets.GITHUB_TOKEN }} # automatically generated, no need to set
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }} # 自动生成的 Token，无需手动配置
 
-          # Set test_mode true to run tests instead of the true action!!
+          # 如果设置为 true 则仅运行测试而不真正合并更新
           test_mode: false
 
-      - name: Sync check
+      # 步骤 3：同步失败时的检查与提示
+      - name: 同步结果检查
         if: failure()
         run: |
-          echo "[Error] 由于上游仓库的 workflow 文件变更，导致 GitHub 自动暂停了本次自动更新，你需要手动 Sync Fork 一次，详细教程请查看项目README.md "
-          echo "[Error] Due to a change in the workflow file of the upstream repository, GitHub has automatically suspended the scheduled automatic update. You need to manually sync your fork. Please refer to the project README.md for instructions. "
+          echo "[错误] 由于上游仓库的 workflow 工作流文件发生变更，导致 GitHub 自动暂停了本次自动更新。"
+          echo "[错误] 你需要前往仓库主页手动点击 'Sync Fork' 完成一次同步。详细操作请查看项目的 README.md 手动同步指南。"
           exit 1
